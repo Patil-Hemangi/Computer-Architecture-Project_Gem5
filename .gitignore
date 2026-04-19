@@ -1,0 +1,17 @@
+# Dataset files
+bigann/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code / devcontainer local state
+.vscode/
+.devcontainer/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary logs
+*.log

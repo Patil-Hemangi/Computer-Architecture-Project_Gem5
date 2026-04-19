@@ -1,0 +1,391 @@
+=== Phase 1: L2 Cache Sweep ===
+>>> L2=256kB
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:12:06
+gem5 executing on f5e3a5729e54, pid 4506
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_l2_256kB /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 256kB --rob-size 128 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_l2_256kB/stats.txt
+>>> L2=512kB
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:12:29
+gem5 executing on f5e3a5729e54, pid 4583
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_l2_512kB /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 512kB --rob-size 128 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_l2_512kB/stats.txt
+>>> L2=1MB
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:12:56
+gem5 executing on f5e3a5729e54, pid 4664
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_l2_1MB /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 1MB --rob-size 128 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_l2_1MB/stats.txt
+>>> L2=2MB
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:13:24
+gem5 executing on f5e3a5729e54, pid 4743
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_l2_2MB /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 2MB --rob-size 128 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_l2_2MB/stats.txt
+
+=== Phase 2: ROB Size Sweep ===
+>>> ROB=32
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:13:50
+gem5 executing on f5e3a5729e54, pid 4824
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_rob_32 /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 512kB --rob-size 32 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_rob_32/stats.txt
+>>> ROB=64
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:14:11
+gem5 executing on f5e3a5729e54, pid 4883
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_rob_64 /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 512kB --rob-size 64 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_rob_64/stats.txt
+>>> ROB=128
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:14:34
+gem5 executing on f5e3a5729e54, pid 4961
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_rob_128 /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 512kB --rob-size 128 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_rob_128/stats.txt
+>>> ROB=256
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:14:57
+gem5 executing on f5e3a5729e54, pid 5036
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_rob_256 /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 512kB --rob-size 256 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_rob_256/stats.txt
+
+=== Phase 3: Stride Prefetcher (HW Bottleneck Fix) ===
+>>> Prefetcher + L2=256kB
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:15:21
+gem5 executing on f5e3a5729e54, pid 5112
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_prefetch_l2_256kB /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 256kB --rob-size 128 --cpu-width 4 --prefetcher --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_prefetch_l2_256kB/stats.txt
+>>> Prefetcher + L2=512kB
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:15:44
+gem5 executing on f5e3a5729e54, pid 5175
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_prefetch_l2_512kB /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 512kB --rob-size 128 --cpu-width 4 --prefetcher --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_prefetch_l2_512kB/stats.txt
+>>> Prefetcher + L2=2MB
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:16:08
+gem5 executing on f5e3a5729e54, pid 5251
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_prefetch_l2_2MB /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 2MB --rob-size 128 --cpu-width 4 --prefetcher --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_prefetch_l2_2MB/stats.txt
+
+=== Phase 4a: Faster DRAM ===
+>>> DRAM=ddr5
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:16:33
+gem5 executing on f5e3a5729e54, pid 5331
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_mem_ddr5 /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 256kB --rob-size 128 --cpu-width 4 --memory ddr5 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_mem_ddr5/stats.txt
+>>> DRAM=hbm
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (128 Mbytes) does not match the address range assigned (256 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:16:54
+gem5 executing on f5e3a5729e54, pid 5405
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_mem_hbm /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5 --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 256kB --rob-size 128 --cpu-width 4 --memory hbm --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_mem_hbm/stats.txt
+
+=== Phase 4b: Software Prefetch Binary ===
+>>> SW prefetch binary + DDR4-2400
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (16384 Mbytes) does not match the address range assigned (4096 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:17:26
+gem5 executing on f5e3a5729e54, pid 5490
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_swprefetch /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5_prefetch --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 256kB --rob-size 128 --cpu-width 4 --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5_prefetch'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+build/X86/arch/x86/generated/exec-ns.cc.inc:27: warn: instruction 'prefetch_t2' unimplemented
+build/X86/arch/x86/generated/exec-ns.cc.inc:27: warn: instruction 'prefetch_nta' unimplemented
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_swprefetch/stats.txt
+>>> SW prefetch binary + HBM
+warn: Max ticks has already been set prior to setting it through the run call. In these cases the max ticks set through the `run` function is used
+Global frequency set at 1000000000000 ticks per second
+src/mem/dram_interface.cc:690: warn: DRAM device capacity (128 Mbytes) does not match the address range assigned (256 Mbytes)
+src/base/statistics.hh:279: warn: One of the stats is a legacy stat. Legacy stat is a stat that does not belong to any statistics::Group. Legacy stat is deprecated.
+board.remote_gdb: Listening for connections on port 7000
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.0.0.1
+gem5 compiled Feb  7 2026 23:39:26
+gem5 started Apr 18 2026 20:18:10
+gem5 executing on f5e3a5729e54, pid 5600
+command line: /opt/gem5/build/X86/gem5.opt --outdir=/workspace/results/hnsw_swprefetch_hbm /workspace/configs/run_benchmark.py --binary /workspace/benchmarks/hnsw_gem5_prefetch --bin-args '500 20 /workspace/bigann/sift/' --l1d-size 32kB --l1i-size 32kB --l2-size 256kB --rob-size 128 --cpu-width 4 --memory hbm --maxtick 3000000000
+
+src/sim/simulate.cc:199: info: Entering event queue @ 0.  Starting simulation...
+src/sim/syscall_emul.cc:74: warn: ignoring syscall set_robust_list(...)
+src/sim/syscall_emul.cc:74: warn: ignoring syscall rseq(...)
+src/sim/mem_state.cc:448: info: Increasing stack size by one page.
+src/sim/syscall_emul.hh:1075: warn: readlink() called on '/proc/self/exe' may yield unexpected results in various settings.
+      Returning '/workspace/benchmarks/hnsw_gem5_prefetch'
+src/sim/syscall_emul.cc:74: warn: ignoring syscall mprotect(...)
+build/X86/arch/x86/generated/exec-ns.cc.inc:27: warn: instruction 'prefetch_t2' unimplemented
+build/X86/arch/x86/generated/exec-ns.cc.inc:27: warn: instruction 'prefetch_nta' unimplemented
+
+[gem5] Simulation complete.
+[gem5] Stats: /workspace/results/hnsw_swprefetch_hbm/stats.txt
+
+=== Sweep Complete ===
+Analyze:
+  python3 /workspace/analysis/parse_stats.py --sweep-dir /workspace/results --param sweep

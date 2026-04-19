@@ -1,0 +1,15 @@
+# Makefile — HNSW gem5 benchmark
+# -O0 -static: required for gem5 SE mode (no HW optimizations, self-contained binary)
+
+CXX      = g++
+CXXFLAGS = -O0 -static -march=x86-64 -std=c++17
+
+.PHONY: all clean
+
+all: hnsw_gem5
+
+hnsw_gem5: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -o hnsw_gem5 hnsw_gem5_benchmark.cpp
+
+clean:
+	rm -f hnsw_gem5
