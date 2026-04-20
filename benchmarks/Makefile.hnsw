@@ -1,15 +1,30 @@
 # Makefile — HNSW gem5 benchmark
-# -O0 -static: required for gem5 SE mode (no HW optimizations, self-contained binary)
+# -O2 -static: matches the flags used in all gem5 simulation runs
 
 CXX      = g++
-CXXFLAGS = -O0 -static -march=x86-64 -std=c++17
+CXXFLAGS = -O2 -static -march=x86-64 -std=c++17
 
 .PHONY: all clean
 
-all: hnsw_gem5
+all: hnsw_gem5 hnsw_gem5_prefetch hnsw_gem5_reorder hnsw_gem5_quant hnsw_gem5_rq hnsw_gem5_mt
 
 hnsw_gem5: hnsw_gem5_benchmark.cpp hnsw_base.h
-	$(CXX) $(CXXFLAGS) -o hnsw_gem5 hnsw_gem5_benchmark.cpp
+	$(CXX) $(CXXFLAGS) -o $@ hnsw_gem5_benchmark.cpp
+
+hnsw_gem5_prefetch: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DSW_PREFETCH -o $@ hnsw_gem5_benchmark.cpp
+
+hnsw_gem5_reorder: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DGRAPH_REORDER -o $@ hnsw_gem5_benchmark.cpp
+
+hnsw_gem5_quant: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DSCALAR_QUANT -o $@ hnsw_gem5_benchmark.cpp
+
+hnsw_gem5_rq: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DGRAPH_REORDER -DSCALAR_QUANT -o $@ hnsw_gem5_benchmark.cpp
+
+hnsw_gem5_mt: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DMULTITHREAD -pthread -o $@ hnsw_gem5_benchmark.cpp
 
 clean:
-	rm -f hnsw_gem5
+	rm -f hnsw_gem5 hnsw_gem5_prefetch hnsw_gem5_reorder hnsw_gem5_quant hnsw_gem5_rq hnsw_gem5_mt

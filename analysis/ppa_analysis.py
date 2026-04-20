@@ -14,8 +14,8 @@ except ImportError:
 configs = [
     # IPC values from re-run after searchKnn bug fix (redundant l2sq eliminated)
     ("Baseline\n256kB ROB128", 1.004,  0.9170, "baseline"),
-    ("L2=512kB",  1.012,  0.9161, "l2"),
-    ("L2=1MB",    1.046,  0.9161, "l2"),
+    ("L2=512kB",  1.006649, 0.9161, "l2"),
+    ("L2=1MB",    1.008662, 0.9161, "l2"),
     ("L2=2MB",    1.110,  0.9158, "l2"),
     ("ROB=32",    0.8694, 0.9196, "rob"),
     ("ROB=64",    1.009,  0.9161, "rob"),

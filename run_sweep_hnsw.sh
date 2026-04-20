@@ -166,6 +166,54 @@ $GEM5_BIN --outdir="$OUT" "$CONFIG" \
     --rob-size 128 --cpu-width 4 \
     --maxtick $MAXTICK
 
+# ---------------------------------------------------------------------------
+# Phase 8: L2 MSHR count sweep  (baseline binary, L2=256kB, ROB=128)
+# Tests whether more outstanding-miss slots improve MLP for HNSW.
+# Expected result: no effect — inter-hop serial dependency limits MLP to ~1.
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Phase 8: L2 MSHR Count Sweep ==="
+for MSHRS in 20 40 64 128; do
+    OUT="$RESULTS/hnsw_mshr_${MSHRS}"
+    mkdir -p "$OUT"
+    echo ">>> MSHRs=$MSHRS"
+    $GEM5_BIN --outdir="$OUT" "$CONFIG" \
+        --binary "$BINARY" --bin-args "$BIN_ARGS" \
+        --l1d-size 32kB --l1i-size 32kB --l2-size 256kB \
+        --rob-size 128 --cpu-width 4 \
+        --l2-mshrs "$MSHRS" \
+        --maxtick $MAXTICK
+done
+
+# ---------------------------------------------------------------------------
+# Phase 9: Query-level multithreading — TLP sweep (SW fix)
+#
+# HNSW queries are embarrassingly parallel across queries; each search thread
+# uses thread_local visited arrays so there is no shared mutable state.
+# ROB/MSHR sweeps showed ILP and MLP are both saturated (serial RAW chain).
+# TLP is the only remaining source of parallelism — N threads → ~N× throughput.
+#
+# Binary: compile with -DMULTITHREAD -pthread
+#   g++ -O2 -static -march=x86-64 -std=c++17 -DMULTITHREAD -pthread \
+#       -o hnsw_gem5_mt hnsw_gem5_benchmark.cpp
+#
+# gem5 uses per-core private L1+L2 (PrivateL1PrivateL2CacheHierarchy).
+# argv[4] = numThreads must match --num-cores.
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Phase 9: Query-Level Multithreading (TLP) ==="
+for CORES in 2 4; do
+    OUT="$RESULTS/hnsw_mt_${CORES}c"
+    mkdir -p "$OUT"
+    echo ">>> MT: $CORES cores / $CORES threads"
+    $GEM5_BIN --outdir="$OUT" "$CONFIG" \
+        --binary "${BINARY}_mt" --bin-args "500 20 /workspace/bigann/sift/ $CORES" \
+        --l1d-size 32kB --l1i-size 32kB --l2-size 256kB \
+        --rob-size 128 --cpu-width 4 \
+        --num-cores "$CORES" \
+        --maxtick $MAXTICK
+done
+
 echo ""
 echo "=== Sweep Complete ==="
 echo "Analyze:"

@@ -24,9 +24,6 @@ from gem5.components.boards.simple_board import SimpleBoard
 from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import (
     PrivateL1PrivateL2CacheHierarchy,
 )
-from gem5.components.cachehierarchies.classic.abstract_classic_cache_hierarchy import (
-    AbstractClassicCacheHierarchy,
-)
 from gem5.components.memory.single_channel import (
     SingleChannelDDR4_2400,
     SingleChannelHBM,
@@ -64,6 +61,8 @@ parser.add_argument("--lq-size", type=int, default=32,
 parser.add_argument("--memory", default="ddr4",
                     choices=["ddr4", "ddr5", "ddr5_fast", "hbm"],
                     help="Memory type: ddr4=DDR4-2400 (baseline), ddr5=DDR5-6400, ddr5_fast=DDR5-8400, hbm=HBM")
+parser.add_argument("--num-cores", type=int, default=1,
+                    help="Number of CPU cores. Use with MULTITHREAD binary for query-level TLP sweep.")
 args = parser.parse_args()
 
 # ---------------------------------------------------------------------------
@@ -87,9 +86,10 @@ class HNSWCore(BaseCPUCore):
         super().__init__(core, ISA.X86)
 
 class HNSWProcessor(BaseCPUProcessor):
-    def __init__(self, width, rob_size, num_int_regs, num_fp_regs, lq_size=32):
+    def __init__(self, width, rob_size, num_int_regs, num_fp_regs, lq_size=32, num_cores=1):
         super().__init__(
-            cores=[HNSWCore(width, rob_size, num_int_regs, num_fp_regs, lq_size)]
+            cores=[HNSWCore(width, rob_size, num_int_regs, num_fp_regs, lq_size)
+                   for _ in range(num_cores)]
         )
 
 # ---------------------------------------------------------------------------
@@ -160,6 +160,7 @@ processor = HNSWProcessor(
     num_int_regs=args.num_int_regs,
     num_fp_regs=args.num_fp_regs,
     lq_size=args.lq_size,
+    num_cores=args.num_cores,
 )
 
 board = SimpleBoard(
