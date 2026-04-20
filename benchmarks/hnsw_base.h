@@ -17,8 +17,6 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
-#include <cstring>
-#include <limits>
 #include <queue>
 #include <stdexcept>
 #include <vector>
@@ -127,7 +125,7 @@ public:
         // From min(level, maxLevel) down to 0 — insert at each layer
         for (int lc = std::min(level, maxLevel_); lc >= 0; --lc) {
             std::vector<int> W = searchLayer(v, ep, efConstruction, lc);
-            std::vector<int> neighbors = selectNeighbors(id, W, mmax(lc), lc);
+            std::vector<int> neighbors = selectNeighbors(id, W, mmax(lc));
 
             // Connect new node to its selected neighbors
             nodes_[id].neighbors[lc] = neighbors;
@@ -138,7 +136,7 @@ public:
                 if (std::find(nbrs.begin(), nbrs.end(), id) == nbrs.end())
                     nbrs.push_back(id);
                 if ((int)nbrs.size() > mmax(lc)) {
-                    std::vector<int> pruned = selectNeighbors(nid, nbrs, mmax(lc), lc);
+                    std::vector<int> pruned = selectNeighbors(nid, nbrs, mmax(lc));
                     nodes_[nid].neighbors[lc] = pruned;
                 }
             }
@@ -226,7 +224,8 @@ public:
     // fetched from DRAM, its likely-to-be-visited neighbors are on the same
     // or adjacent cache lines, turning cold DRAM misses into warm L2 hits.
     // -------------------------------------------------------------------------
-    void reorderByBFS() {
+    // newToOldOut (optional): filled with newToOldOut[newId] = originalInsertionIndex
+    void reorderByBFS(std::vector<int>* newToOldOut = nullptr) {
         if (nodeCount_ == 0) return;
 
         std::vector<int> oldToNew(nodeCount_, -1);
@@ -268,6 +267,8 @@ public:
 
         nodes_      = std::move(reordered);
         entryPoint_ = 0;   // entry point was assigned new ID 0 above
+
+        if (newToOldOut) *newToOldOut = newOrder; // newOrder[newId] = oldId
     }
 
 private:
@@ -388,8 +389,7 @@ private:
     // -------------------------------------------------------------------------
     std::vector<int> selectNeighbors(int id,
                                      const std::vector<int>& candidates,
-                                     int M_,
-                                     int lc) const {
+                                     int M_) const {
         // Sort candidates by distance to the new node
         std::vector<std::pair<float, int>> sorted;
         sorted.reserve(candidates.size());

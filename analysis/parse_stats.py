@@ -121,11 +121,12 @@ def print_summary(stats, title="GEM5 Simulation Summary"):
         mr = misses / (hits + misses) * 100
         print(f"  {'L1D Miss Rate (computed)':<35} {mr:>14.2f}%")
 
-    bp_lookups  = stats.get("Branch Lookups")
-    bp_wrong    = stats.get("Branch Mispredicts")
-    bp_correct  = stats.get("Branch Predictions")
-    if bp_lookups is not None and bp_wrong is not None and bp_lookups > 0:
-        bpr = bp_wrong / bp_lookups * 100
+    # Use condPredicted (conditional branches only) as denominator — matches paper definition.
+    # lookups_0::total includes unconditional branches and would undercount the rate.
+    bp_predicted_denom = stats.get("Branch Predictions")  # condPredicted
+    bp_wrong           = stats.get("Branch Mispredicts")  # condIncorrect
+    if bp_predicted_denom is not None and bp_wrong is not None and bp_predicted_denom > 0:
+        bpr = bp_wrong / bp_predicted_denom * 100
         print(f"  {'Branch Mispredict Rate':<35} {bpr:>14.2f}%")
 
     # --- MPKI Analysis ---

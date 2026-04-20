@@ -286,7 +286,9 @@ def plot_mpki(out_dir):
     if not HAS_PLOT:
         return
     labels = [c[0] for c in CONFIGS_MPKI]
-    # L2 MPKI = miss_rate × baseline_L2_accesses / (SIM_INSTS / 1000)
+    # L2 MPKI approximation: assumes total L2 accesses ≈ baseline (76,963) for all configs.
+    # Exact formula is miss_rate × actual_L2_accesses / (sim_insts/1000); we only have miss_rate,
+    # so baseline_L2_accesses is used as a constant approximation across configs.
     mpki_vals = [c[1] * BASELINE_L2_ACCESSES / (SIM_INSTS / 1000) for c in CONFIGS_MPKI]
     colors    = [c[2] for c in CONFIGS_MPKI]
 

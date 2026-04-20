@@ -16,21 +16,33 @@
 //     g++ -O2 -static -march=x86-64 -std=c++17 -DSCALAR_QUANT -o hnsw_gem5_quant hnsw_gem5_benchmark.cpp
 //   Reorder + quantization combined:
 //     g++ -O2 -static -march=x86-64 -std=c++17 -DGRAPH_REORDER -DSCALAR_QUANT -o hnsw_gem5_rq hnsw_gem5_benchmark.cpp
+//   Multithreaded query dispatch (Iteration 9 — TLP):
+//     g++ -O2 -static -march=x86-64 -std=c++17 -DMULTITHREAD -pthread -o hnsw_gem5_mt hnsw_gem5_benchmark.cpp
+//   argv: <numBase> <numQueries> <dataDir> [numThreads=1]
 //
 // Run natively:
 //   ./hnsw_gem5 500 20 /workspace/bigann/sift/
 //
-// Run in gem5:
-//   gem5.opt configs/run_benchmark.py \
-//       --binary benchmarks/hnsw_gem5 \
+// Run in gem5 (single-core baseline):
+//   gem5.opt configs/run_benchmark.py
+//       --binary benchmarks/hnsw_gem5
 //       --bin-args "500 20 /workspace/bigann/sift/"
+//
+// Run in gem5 (multithreaded, 4 cores):
+//   gem5.opt configs/run_benchmark.py
+//       --binary benchmarks/hnsw_gem5_mt
+//       --bin-args "500 20 /workspace/bigann/sift/ 4"
+//       --num-cores 4
 // =============================================================================
 
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <vector>
+
+#ifdef MULTITHREAD
+#include <thread>
+#endif
 
 #include "hnsw_base.h"
 
@@ -97,7 +109,10 @@ static std::vector<Vec> quantize(const std::vector<FloatVec>& fvecs) {
 int main(int argc, char** argv) {
     int numBase    = (argc > 1) ? std::atoi(argv[1]) : 500;
     int numQueries = (argc > 2) ? std::atoi(argv[2]) : 20;
-    const char* dataDir = (argc > 3) ? argv[3] : "/workspace/bigann/sift/";
+    const char* dataDir  = (argc > 3) ? argv[3] : "/workspace/bigann/sift/";
+#ifdef MULTITHREAD
+    int numThreads = (argc > 4) ? std::atoi(argv[4]) : 1;
+#endif
 
     // Build file paths
     char basePath[512], queryPath[512];
@@ -146,37 +161,121 @@ int main(int argc, char** argv) {
     printf("    Build: %.3f sec  (%.0f inserts/sec)\n\n",
            buildSec, base.size() / buildSec);
 
+    const int K        = 10;   // top-K neighbors
+    const int efSearch = 50;   // beam width for HNSW search
+
+    // -------------------------------------------------------------------------
+    // [3] Build self-consistent ground truth via brute-force BEFORE reordering.
+    //     Must run here: reorderByBFS() remaps node IDs, so GT computed after
+    //     reorder would use mismatched IDs and give incorrect recall values.
+    //     base[i] → GT records original index i; searchKnn returns these same
+    //     indices only when the index has not yet been reordered.
+    // -------------------------------------------------------------------------
+    printf("[3] Computing brute-force ground truth (N=%d, Q=%d, K=%d)...\n",
+           numBase, (int)queries.size(), K);
+    std::vector<std::vector<int>> groundTruth(queries.size());
+    {
+        for (int q = 0; q < (int)queries.size(); ++q) {
+            std::vector<std::pair<float,int>> dists;
+            dists.reserve(base.size());
+            for (int i = 0; i < (int)base.size(); ++i)
+                dists.push_back({l2sq(queries[q], base[i]), i});
+            std::partial_sort(dists.begin(), dists.begin() + K, dists.end());
+            groundTruth[q].resize(K);
+            for (int k = 0; k < K; ++k)
+                groundTruth[q][k] = dists[k].second;
+        }
+    }
+    printf("    Done.\n\n");
+
+    // Free base vectors — no longer needed after GT computation and index build
+    { std::vector<Vec>().swap(base); }
+
 #ifdef GRAPH_REORDER
-    // Renumber nodes in BFS traversal order from the entry point so that
-    // graph-neighbors are contiguous in memory — improves spatial locality.
+    // newToOld[newId] = originalInsertionIndex (== base[] index used in GT)
+    std::vector<int> newToOld;
     auto tr = std::chrono::high_resolution_clock::now();
-    index.reorderByBFS();
+    index.reorderByBFS(&newToOld);
     auto te2 = std::chrono::high_resolution_clock::now();
     printf("    BFS reorder: %.3f sec\n\n",
            std::chrono::duration<double>(te2 - tr).count());
 #endif
 
-    // Free base vectors after index is built
-    { std::vector<Vec>().swap(base); }
+    // -------------------------------------------------------------------------
+    // [4] Search
+    // -------------------------------------------------------------------------
+    int nq = (int)queries.size();
+    std::vector<std::vector<HNSWIndex::Result>> results(nq);
 
-    // -------------------------------------------------------------------------
-    // [3] Search
-    // -------------------------------------------------------------------------
-    const int K        = 10;   // top-K neighbors to return (standard ANN benchmark value)
-    const int efSearch = 50;  // beam width ≥ K; higher = better recall, more compute
-    printf("[3] Querying (%d queries, K=%d, efSearch=%d)...\n",
-           (int)queries.size(), K, efSearch);
+#ifdef MULTITHREAD
+    // Query-level (TLP) parallelism: independent queries dispatched across threads.
+    // searchKnn is thread-safe — visitedGen/curGen are thread_local in hnsw_base.h.
+    // The index (nodes_, entryPoint_, maxLevel_) is read-only during search.
+    if (numThreads < 1) numThreads = 1;
+    printf("[4] Querying (%d queries, K=%d, efSearch=%d, threads=%d)...\n",
+           nq, K, efSearch, numThreads);
 
     auto ts = std::chrono::high_resolution_clock::now();
-    for (int q = 0; q < (int)queries.size(); ++q)
-        index.searchKnn(queries[q], K, efSearch);
+    {
+        std::vector<std::thread> workers;
+        workers.reserve(numThreads);
+        int chunk = (nq + numThreads - 1) / numThreads;
+        for (int t = 0; t < numThreads; ++t) {
+            int start = t * chunk;
+            int end   = std::min(start + chunk, nq);
+            if (start >= end) break;
+            workers.emplace_back([&, start, end]() {
+                for (int q = start; q < end; ++q)
+                    results[q] = index.searchKnn(queries[q], K, efSearch);
+            });
+        }
+        for (auto& w : workers) w.join();
+    }
     auto te = std::chrono::high_resolution_clock::now();
+#else
+    printf("[4] Querying (%d queries, K=%d, efSearch=%d)...\n",
+           nq, K, efSearch);
+
+    auto ts = std::chrono::high_resolution_clock::now();
+    for (int q = 0; q < nq; ++q)
+        results[q] = index.searchKnn(queries[q], K, efSearch);
+    auto te = std::chrono::high_resolution_clock::now();
+#endif
+
     double searchSec = std::chrono::duration<double>(te - ts).count();
     printf("    Search: %.3f sec  (%.0f QPS)\n\n",
-           searchSec, queries.size() / searchSec);
+           searchSec, nq / searchSec);
 
     // -------------------------------------------------------------------------
-    // [4] Summary
+    // [5] Recall@K
+    // -------------------------------------------------------------------------
+    if (!groundTruth.empty()) {
+        int hits = 0, total = 0;
+        for (int q = 0; q < nq && q < (int)groundTruth.size(); ++q) {
+            const auto& gt = groundTruth[q];
+            int gtK = std::min((int)gt.size(), K);
+            for (const auto& r : results[q]) {
+                // Translate returned ID back to original insertion index.
+                // After reorderByBFS, newToOld[newId] == original base[] index.
+#ifdef GRAPH_REORDER
+                int origId = newToOld[r.id];
+#else
+                int origId = r.id;
+#endif
+                for (int j = 0; j < gtK; ++j) {
+                    if (origId == gt[j]) { ++hits; break; }
+                }
+            }
+            total += gtK;
+        }
+        double recall = (total > 0) ? (100.0 * hits / total) : 0.0;
+        printf("[5] Recall@%d = %.2f%%  (%d / %d correct)\n\n", K, recall, hits, total);
+    } else {
+        printf("[5] Recall@%d = N/A  (ground truth file not found)\n\n", K);
+    }
+
+    // -------------------------------------------------------------------------
+    // [6] Summary
     // -------------------------------------------------------------------------
     printf("Index: nodes=%d  entry=%d  maxLevel=%d\n",
            index.size(), index.entryPoint(), index.maxLevel());
