@@ -74,6 +74,21 @@ struct Node {
     Node() : level(0) { vec.fill(0); }   // 0 works for both float and int8_t
 };
 
+#ifdef PACKED_SEARCH
+struct SearchNode {
+    Vec vec;
+    int level;
+    std::array<int, kMaxLevels> neighborOffset;
+    std::array<uint16_t, kMaxLevels> neighborCount;
+
+    SearchNode() : level(0) {
+        vec.fill(0);
+        neighborOffset.fill(0);
+        neighborCount.fill(0);
+    }
+};
+#endif
+
 // =============================================================================
 // HNSW Index
 //
@@ -201,7 +216,7 @@ public:
         std::vector<std::pair<float, int>> ranked;
         ranked.reserve(W.size());
         for (int id : W)
-            ranked.push_back({ l2sq(nodes_[id].vec, query), id });
+            ranked.push_back({ l2sq(nodeVec(id), query), id });
         std::sort(ranked.begin(), ranked.end());
 
         std::vector<Result> out;
@@ -215,6 +230,42 @@ public:
     int  entryPoint() const { return entryPoint_; }
     int  maxLevel()   const { return maxLevel_; }
 
+    void finalizeForSearch() {
+#ifdef PACKED_SEARCH
+        if (searchPacked_) return;
+
+        size_t totalNeighbors = 0;
+        for (int id = 0; id < nodeCount_; ++id) {
+            for (int lc = 0; lc <= nodes_[id].level; ++lc)
+                totalNeighbors += nodes_[id].neighbors[lc].size();
+        }
+
+        searchNodes_.assign(nodeCount_, SearchNode());
+        packedNeighbors_.clear();
+        packedNeighbors_.reserve(totalNeighbors);
+
+        for (int id = 0; id < nodeCount_; ++id) {
+            SearchNode packed;
+            packed.vec = nodes_[id].vec;
+            packed.level = nodes_[id].level;
+
+            for (int lc = 0; lc <= packed.level; ++lc) {
+                auto& nbrs = nodes_[id].neighbors[lc];
+                packed.neighborOffset[lc] = static_cast<int>(packedNeighbors_.size());
+                packed.neighborCount[lc] = static_cast<uint16_t>(nbrs.size());
+                packedNeighbors_.insert(packedNeighbors_.end(), nbrs.begin(), nbrs.end());
+                std::vector<int>().swap(nbrs);
+            }
+
+            searchNodes_[id] = packed;
+        }
+
+        nodes_.clear();
+        nodes_.shrink_to_fit();
+        searchPacked_ = true;
+#endif
+    }
+
     // -------------------------------------------------------------------------
     // reorderByBFS — renumber nodes in BFS traversal order from the entry point
     //
@@ -227,6 +278,10 @@ public:
     // newToOldOut (optional): filled with newToOldOut[newId] = originalInsertionIndex
     void reorderByBFS(std::vector<int>* newToOldOut = nullptr) {
         if (nodeCount_ == 0) return;
+#ifdef PACKED_SEARCH
+        if (searchPacked_)
+            throw std::runtime_error("reorderByBFS must run before finalizeForSearch");
+#endif
 
         std::vector<int> oldToNew(nodeCount_, -1);
         std::vector<int> newOrder;
@@ -273,6 +328,11 @@ public:
 
 private:
     std::vector<Node> nodes_;
+#ifdef PACKED_SEARCH
+    std::vector<SearchNode> searchNodes_;
+    std::vector<int> packedNeighbors_;
+    bool searchPacked_ = false;
+#endif
     int nodeCount_;
     int entryPoint_, maxLevel_;
     float levelMul_;
@@ -284,12 +344,40 @@ private:
     // Used in Algorithm 5 line 6: ep ← nearest element in W to q.
     int nearestIn(const std::vector<int>& candidates, const Vec& q) const {
         int   best  = candidates[0];
-        float bestD = l2sq(nodes_[best].vec, q);
+        float bestD = l2sq(nodeVec(best), q);
         for (int i = 1; i < (int)candidates.size(); ++i) {
-            float d = l2sq(nodes_[candidates[i]].vec, q);
+            float d = l2sq(nodeVec(candidates[i]), q);
             if (d < bestD) { bestD = d; best = candidates[i]; }
         }
         return best;
+    }
+
+    const Vec& nodeVec(int id) const {
+#ifdef PACKED_SEARCH
+        if (searchPacked_) return searchNodes_[id].vec;
+#endif
+        return nodes_[id].vec;
+    }
+
+    int nodeLevel(int id) const {
+#ifdef PACKED_SEARCH
+        if (searchPacked_) return searchNodes_[id].level;
+#endif
+        return nodes_[id].level;
+    }
+
+    const int* neighborData(int id, int lc) const {
+#ifdef PACKED_SEARCH
+        if (searchPacked_) return packedNeighbors_.data() + searchNodes_[id].neighborOffset[lc];
+#endif
+        return nodes_[id].neighbors[lc].data();
+    }
+
+    int neighborCount(int id, int lc) const {
+#ifdef PACKED_SEARCH
+        if (searchPacked_) return searchNodes_[id].neighborCount[lc];
+#endif
+        return static_cast<int>(nodes_[id].neighbors[lc].size());
     }
 
     // Random level — geometric distribution (Algorithm 1 line 4)
@@ -331,7 +419,7 @@ private:
         std::priority_queue<Pair> W;
 
         for (int ep : entryPoints) {
-            float d = l2sq(nodes_[ep].vec, q);
+            float d = l2sq(nodeVec(ep), q);
             cands.push({d, ep});
             W.push({d, ep});
             visitedGen[ep] = curGen;
@@ -348,20 +436,33 @@ private:
 
 #ifdef SW_PREFETCH
             // 1-hop: prefetch neighbor vectors before distance computation.
-            for (int nid : nodes_[cId].neighbors[lc])
-                __builtin_prefetch(nodes_[nid].vec.data(), 0, 1);
+            const int* prefetchNbrs = neighborData(cId, lc);
+            int prefetchCount = neighborCount(cId, lc);
+            for (int ni = 0; ni < prefetchCount; ++ni)
+                __builtin_prefetch(nodeVec(prefetchNbrs[ni]).data(), 0, 1);
             // 2-hop: prefetch neighbors' neighbor lists for the next iteration.
-            for (int nid : nodes_[cId].neighbors[lc]) {
-                if (!nodes_[nid].neighbors[lc].empty())
-                    __builtin_prefetch(nodes_[nid].neighbors[lc].data(), 0, 0);
+            for (int ni = 0; ni < prefetchCount; ++ni) {
+                int nid = prefetchNbrs[ni];
+                if (neighborCount(nid, lc) > 0)
+                    __builtin_prefetch(neighborData(nid, lc), 0, 0);
             }
 #endif
 
-            for (int nid : nodes_[cId].neighbors[lc]) {
+            const int* nbrs = neighborData(cId, lc);
+            int nbrCount = neighborCount(cId, lc);
+            int frontier[32];
+            int frontierCount = 0;
+
+            for (int ni = 0; ni < nbrCount; ++ni) {
+                int nid = nbrs[ni];
                 if (visitedGen[nid] == curGen) continue;
                 visitedGen[nid] = curGen;
+                frontier[frontierCount++] = nid;
+            }
 
-                float nd = l2sq(nodes_[nid].vec, q);
+            for (int fi = 0; fi < frontierCount; ++fi) {
+                int nid = frontier[fi];
+                float nd = l2sq(nodeVec(nid), q);
                 if ((int)W.size() < ef || nd < W.top().first) {
                     cands.push({nd, nid});
                     W.push({nd, nid});
@@ -394,7 +495,7 @@ private:
         std::vector<std::pair<float, int>> sorted;
         sorted.reserve(candidates.size());
         for (int cid : candidates)
-            sorted.push_back({ l2sq(nodes_[id].vec, nodes_[cid].vec), cid });
+            sorted.push_back({ l2sq(nodeVec(id), nodeVec(cid)), cid });
         std::sort(sorted.begin(), sorted.end());
 
         std::vector<int> result;
@@ -409,7 +510,7 @@ private:
             // Keep if cid is closer to base than to any already-selected neighbor
             bool keep = true;
             for (int rid : result) {
-                if (l2sq(nodes_[cid].vec, nodes_[rid].vec) < dToBase) {
+                if (l2sq(nodeVec(cid), nodeVec(rid)) < dToBase) {
                     keep = false;
                     break;
                 }

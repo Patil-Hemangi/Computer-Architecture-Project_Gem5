@@ -6,7 +6,7 @@ CXXFLAGS = -O2 -static -march=x86-64 -std=c++17
 
 .PHONY: all clean
 
-all: hnsw_gem5 hnsw_gem5_prefetch hnsw_gem5_reorder hnsw_gem5_quant hnsw_gem5_rq hnsw_gem5_mt
+all: hnsw_gem5 hnsw_gem5_prefetch hnsw_gem5_reorder hnsw_gem5_quant hnsw_gem5_rq hnsw_gem5_packed hnsw_gem5_deep hnsw_gem5_hybrid hnsw_gem5_hybrid_deep hnsw_gem5_mt
 
 hnsw_gem5: hnsw_gem5_benchmark.cpp hnsw_base.h
 	$(CXX) $(CXXFLAGS) -o $@ hnsw_gem5_benchmark.cpp
@@ -23,8 +23,20 @@ hnsw_gem5_quant: hnsw_gem5_benchmark.cpp hnsw_base.h
 hnsw_gem5_rq: hnsw_gem5_benchmark.cpp hnsw_base.h
 	$(CXX) $(CXXFLAGS) -DGRAPH_REORDER -DSCALAR_QUANT -o $@ hnsw_gem5_benchmark.cpp
 
+hnsw_gem5_packed: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DPACKED_SEARCH -o $@ hnsw_gem5_benchmark.cpp
+
+hnsw_gem5_deep: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DPACKED_SEARCH -DGRAPH_REORDER -DSCALAR_QUANT -o $@ hnsw_gem5_benchmark.cpp
+
+hnsw_gem5_hybrid: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DSCALAR_QUANT -DHYBRID_RERANK -o $@ hnsw_gem5_benchmark.cpp
+
+hnsw_gem5_hybrid_deep: hnsw_gem5_benchmark.cpp hnsw_base.h
+	$(CXX) $(CXXFLAGS) -DPACKED_SEARCH -DGRAPH_REORDER -DSCALAR_QUANT -DHYBRID_RERANK -o $@ hnsw_gem5_benchmark.cpp
+
 hnsw_gem5_mt: hnsw_gem5_benchmark.cpp hnsw_base.h
 	$(CXX) $(CXXFLAGS) -DMULTITHREAD -pthread -o $@ hnsw_gem5_benchmark.cpp
 
 clean:
-	rm -f hnsw_gem5 hnsw_gem5_prefetch hnsw_gem5_reorder hnsw_gem5_quant hnsw_gem5_rq hnsw_gem5_mt
+	rm -f hnsw_gem5 hnsw_gem5_prefetch hnsw_gem5_reorder hnsw_gem5_quant hnsw_gem5_rq hnsw_gem5_packed hnsw_gem5_deep hnsw_gem5_hybrid hnsw_gem5_hybrid_deep hnsw_gem5_mt

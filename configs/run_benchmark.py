@@ -63,6 +63,11 @@ parser.add_argument("--memory", default="ddr4",
                     help="Memory type: ddr4=DDR4-2400 (baseline), ddr5=DDR5-6400, ddr5_fast=DDR5-8400, hbm=HBM")
 parser.add_argument("--num-cores", type=int, default=1,
                     help="Number of CPU cores. Use with MULTITHREAD binary for query-level TLP sweep.")
+parser.add_argument("--l2-assoc", type=int, default=16,
+                    help="L2 cache associativity (default=16). Sweep: 1,2,4,8,16 to distinguish conflict vs capacity misses.")
+parser.add_argument("--l2-replacement", default="lru",
+                    choices=["lru", "random", "fifo", "brrip"],
+                    help="L2 replacement policy (default=lru). Options: lru, random, fifo, brrip.")
 args = parser.parse_args()
 
 # ---------------------------------------------------------------------------
@@ -98,13 +103,23 @@ class HNSWProcessor(BaseCPUProcessor):
 # This is the correct gem5 hook point; modifying _l2_caches after Simulator()
 # is too late (m5.instantiate has already frozen the object graph).
 # ---------------------------------------------------------------------------
+_RP_MAP = {
+    "lru":    "LRURP",
+    "random": "RandomRP",
+    "fifo":   "FIFORP",
+    "brrip":  "BRRIPRP",
+}
+
 class ConfigurableL2CacheHierarchy(PrivateL1PrivateL2CacheHierarchy):
     def __init__(self, l1d_size, l1i_size, l2_size,
-                 l2_mshrs=20, stride_prefetcher=False, imp=False):
+                 l2_mshrs=20, stride_prefetcher=False, imp=False,
+                 l2_assoc=16, l2_replacement="lru"):
         super().__init__(l1d_size=l1d_size, l1i_size=l1i_size, l2_size=l2_size)
-        self._cfg_mshrs   = l2_mshrs
-        self._cfg_stride  = stride_prefetcher
-        self._cfg_imp     = imp
+        self._cfg_mshrs       = l2_mshrs
+        self._cfg_stride      = stride_prefetcher
+        self._cfg_imp         = imp
+        self._cfg_assoc       = l2_assoc
+        self._cfg_replacement = l2_replacement
 
     def incorporate_cache_hierarchy(self, board):
         super().incorporate_cache_hierarchy(board)
@@ -123,6 +138,16 @@ class ConfigurableL2CacheHierarchy(PrivateL1PrivateL2CacheHierarchy):
             if self._cfg_mshrs != 20:
                 l2.mshrs = self._cfg_mshrs
                 print(f"[config] L2 MSHRs set to {self._cfg_mshrs}")
+            if self._cfg_assoc != 16:
+                l2.assoc = self._cfg_assoc
+                print(f"[config] L2 associativity set to {self._cfg_assoc}-way")
+            if self._cfg_replacement != "lru":
+                rp_cls_name = _RP_MAP[self._cfg_replacement]
+                import importlib
+                m5_objects = importlib.import_module("m5.objects")
+                rp_cls = getattr(m5_objects, rp_cls_name)
+                l2.replacement_policy = rp_cls()
+                print(f"[config] L2 replacement policy set to {rp_cls_name}")
             if self._cfg_imp:
                 from m5.objects import IndirectMemoryPrefetcher
                 l2.prefetcher = IndirectMemoryPrefetcher()
@@ -143,6 +168,8 @@ cache_hierarchy = ConfigurableL2CacheHierarchy(
     l2_mshrs=args.l2_mshrs,
     stride_prefetcher=args.prefetcher,
     imp=args.imp,
+    l2_assoc=args.l2_assoc,
+    l2_replacement=args.l2_replacement,
 )
 
 _mem_map = {

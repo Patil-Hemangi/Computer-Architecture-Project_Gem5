@@ -1,150 +1,150 @@
 """
-ppa_analysis.py  --  EEL6764 HNSW PPA Cost Analysis
-Analytical Power-Performance-Area model comparing all sweep configs.
+ppa_analysis.py  --  EEL6764 HNSW PPA Analysis
+Uses REAL McPAT v1.3 numbers (45nm HP process) — NOT analytical estimates.
+
+McPAT was run on gem5 stats.txt for each ROI configuration.
+Area is circuit-level (SRAM + logic + interconnect), power is full chip.
 """
 import os
-try:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    HAS_PLOT = True
-except ImportError:
-    HAS_PLOT = False
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
 
+CLOCK_HZ   = 3.0e9   # 3 GHz (gem5 config)
+BASELINE_A = 39.21   # mm² — real McPAT area for baseline (all SW configs share this)
+
+# Real McPAT results for each configuration
+# (label, IPC_ROI, area_mm2, runtime_power_W, total_power_W, category)
 configs = [
-    # IPC values from re-run after searchKnn bug fix (redundant l2sq eliminated)
-    ("Baseline\n256kB ROB128", 1.004,  0.9170, "baseline"),
-    ("L2=512kB",  1.006649, 0.9161, "l2"),
-    ("L2=1MB",    1.008662, 0.9161, "l2"),
-    ("L2=2MB",    1.110,  0.9158, "l2"),
-    ("ROB=32",    0.8694, 0.9196, "rob"),
-    ("ROB=64",    1.009,  0.9161, "rob"),
-    ("ROB=256",   1.011,  0.9160, "rob"),
-    ("HW Prefetch\n256kB", 1.004,  0.9170, "prefetch"),  # confirmed 0% delta
-    ("HW Prefetch\n512kB", 1.012,  0.9161, "prefetch"),  # confirmed 0% delta
-    ("HW Prefetch\n2MB",   1.110,  0.9158, "prefetch"),  # confirmed 0% delta
-    ("DDR5-6400",      0.9023, 0.8725, "mem"),
-    ("HBM 1.0",        1.004,  0.8769, "mem"),  # neutral vs DDR4 baseline
-    ("SW Prefetch",    0.9774, 0.9207, "mem"),
-    ("SW+HBM",         1.024,  0.8753, "mem"),
-    # Phase 5-7: algorithmic SW fixes — zero hardware cost, 1.00x area
-    ("Graph Reorder",  1.022,  0.8864, "sw_fix"),  # BFS node renumbering
-    ("Scalar Quant",   1.041,  0.8458, "sw_fix"),  # float32→int8 (4× vec size)
-    ("Reorder+Quant",  1.106,  0.8456, "sw_fix"),  # combined — first YES in PPA
-    ("Reorder+L2=2MB", 1.121,  0.8844, "sw_fix"),  # best absolute IPC
+    ("Baseline\n(256kB L2)", 0.932,  39.21,  6.060,  9.970,  "baseline"),
+    ("Graph\nReorder",       0.986,  39.21,  5.780,  9.691,  "sw_fix"),
+    ("Scalar Quant\n(int8)", 1.026,  39.21,  5.973,  9.884,  "sw_fix"),
+    ("Reorder +\nQuant",     1.039,  39.21,  6.025,  9.936,  "sw_fix"),
+    ("L2=2MB\n(HW only)",   1.036,  53.53,  6.558, 11.335,  "hw"),
 ]
 
-# Baseline IPC is derived from configs[0] so it stays in sync automatically.
-BASELINE_IPC = configs[0][1]
+BASELINE_IPC   = configs[0][1]
+BASELINE_AREA  = configs[0][2]
+BASELINE_POWER = configs[0][4]
 
-# PPA model constants — CACTI-inspired estimates for a 7 nm-class server chip:
-#   L2 cache ≈ 20% of die area (scales linearly with size)
-#   ROB       ≈  5% of die area (scales linearly with entry count vs 128-entry base)
-#   Prefetcher logic ≈ 2% added area overhead
-#   Dynamic power ∝ Area^0.8 (sub-linear: voltage scales down with area at same perf)
-CACHE_CHIP_FRACTION    = 0.20
-ROB_CHIP_FRACTION      = 0.05
-PREFETCH_CHIP_FRACTION = 0.02
-POWER_EXPONENT         = 0.80
+CAT_COLOR = {
+    "baseline": "#888888",
+    "sw_fix":   "#FF9800",
+    "hw":       "#F44336",
+}
+CAT_LABEL = {
+    "baseline": "Baseline",
+    "sw_fix":   "SW-only fix (0% area cost)",
+    "hw":       "HW change (silicon cost)",
+}
 
-def relative_area(label):
-    # Pure-SW and pure-mem configs override everything — check first to avoid
-    # spurious prefetcher/cache additions (e.g. "SW Prefetch" contains "Prefetch").
-    if label in ("DDR5-6400", "HBM 1.0", "SW Prefetch", "SW+HBM"):
-        return 1.0  # DRAM is off-chip; same die area as baseline
-    if label in ("Graph Reorder", "Scalar Quant", "Reorder+Quant"):
-        return 1.0  # pure software: zero silicon cost
+# ─── Figure: 3-panel PPA using real McPAT numbers ────────────────────────────
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+fig.suptitle("HNSW PPA Analysis — Real McPAT v1.3 Numbers (45nm HP, 3 GHz)",
+             fontsize=12, fontweight="bold")
 
-    if   "512kB" in label: cache_scale = 2.0
-    elif "1MB"   in label: cache_scale = 4.0
-    elif "2MB"   in label: cache_scale = 8.0
-    else:                  cache_scale = 1.0
-    area = 1.0 + CACHE_CHIP_FRACTION * (cache_scale - 1.0)
+labels  = [c[0]                                           for c in configs]
+ipcs    = [c[1]                                           for c in configs]
+gains   = [(c[1] - BASELINE_IPC)/BASELINE_IPC*100        for c in configs]
+areas   = [c[2] / BASELINE_AREA                          for c in configs]
+colors  = [CAT_COLOR[c[5]]                               for c in configs]
 
-    if   "ROB=32"  in label: area += ROB_CHIP_FRACTION * (32/128  - 1.0)
-    elif "ROB=64"  in label: area += ROB_CHIP_FRACTION * (64/128  - 1.0)
-    elif "ROB=256" in label: area += ROB_CHIP_FRACTION * (256/128 - 1.0)
+# Legend patches
+legend_patches = [
+    mpatches.Patch(color=v, label=CAT_LABEL[k]) for k, v in CAT_COLOR.items()
+]
 
-    if "Prefetch" in label: area += PREFETCH_CHIP_FRACTION
-    return area
+# ── Panel 1: IPC bar chart ──────────────────────────────────────────────────
+ax = axes[0]
+bars = ax.bar(range(len(configs)), ipcs, color=colors, edgecolor="black", linewidth=0.8)
+ax.axhline(BASELINE_IPC, color="black", linestyle="--", linewidth=1, label="Baseline IPC")
+for i, (bar, ipc) in enumerate(zip(bars, ipcs)):
+    ax.text(bar.get_x() + bar.get_width()/2, ipc + 0.005, f"{ipc:.3f}",
+            ha="center", va="bottom", fontsize=7.5)
+ax.set_xticks(range(len(configs)))
+ax.set_xticklabels(labels, fontsize=7.5)
+ax.set_ylabel("IPC (ROI — search phase)")
+ax.set_title("IPC Comparison\n(real gem5 stats)")
+ax.set_ylim(0.80, 1.15)
+ax.legend(handles=legend_patches + [
+    plt.Line2D([0], [0], color="black", linestyle="--", label="Baseline")
+], fontsize=7, loc="upper left")
+ax.set_facecolor("#F9F9F9")
 
-def relative_power(area_rel):
-    return area_rel ** POWER_EXPONENT
+# ── Panel 2: IPC gain vs relative chip area (real McPAT) ───────────────────
+ax = axes[1]
+non_base = [(areas[i], gains[i], colors[i], labels[i])
+            for i in range(len(configs)) if configs[i][5] != "baseline"]
+nb_areas, nb_gains, nb_colors, nb_labels = zip(*non_base)
 
-print("\n" + "="*85)
-print(f"  {'Config':<22} {'IPC':>6} {'IPC gain':>9} {'Rel Area':>9} {'Rel Power':>10} {'Perf/Area':>10} {'Worth it?':>10}")
-print("="*85)
+ax.scatter(nb_areas, nb_gains, c=nb_colors, s=180,
+           edgecolors="black", linewidths=0.8, zorder=5)
+for a, g, lbl in zip(nb_areas, nb_gains, nb_labels):
+    ax.annotate(lbl.replace("\n", " "), (a, g),
+                xytext=(8, 4), textcoords="offset points",
+                fontsize=8,
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8))
 
-for label, ipc, l2_mr, cat in configs:
-    name = label.replace("\n", " ")
-    ipc_gain = (ipc - BASELINE_IPC) / BASELINE_IPC * 100
-    area     = relative_area(name)
-    power    = relative_power(area)
-    eff      = ipc_gain / ((area - 1.0) * 100) if area > 1.0 else float("inf")
-    # YES: >5% gain at <30% area cost — meaningful improvement, reasonable silicon budget
-    # MARGINAL: 2–5% gain or area 1.3–2×
-    # NO: <2% gain (noise-level) or negative
-    worth    = "YES" if (ipc_gain > 5.0 and area < 1.3) else ("NO" if ipc_gain < 2.0 else "MARGINAL")
-    gain_str = f"{ipc_gain:+.1f}%" if abs(ipc_gain) > 0.01 else "baseline"
-    print(f"  {name:<22} {ipc:>6.4f} {gain_str:>9} {area:>8.2f}x {power:>9.2f}x {eff:>9.2f} {worth:>10}")
+ax.axvline(1.0, color="gray", linestyle="--", linewidth=0.8, alpha=0.6, label="No area cost")
+ax.axhline(0,   color="black", linewidth=0.5)
+ax.set_xlabel("Relative Chip Area  (McPAT mm² / Baseline 39.21 mm²)", fontsize=9)
+ax.set_ylabel("IPC Gain vs Baseline  (%)")
+ax.set_title("Performance vs Area Cost\n(real McPAT area — NOT estimated)")
+ax.set_xlim(0.90, 1.50)
+ax.set_ylim(-2, 14)
+ax.legend(handles=legend_patches, fontsize=7, loc="upper right")
+ax.set_facecolor("#F9F9F9")
+ax.grid(True, linestyle="--", alpha=0.35, color="gray")
 
-print("="*85)
-print(f"\n  Baseline IPC = {BASELINE_IPC:.4f}  (L2=256kB, ROB=128, Width=4, DDR4-2400)")
-print(f"  Prefetcher result: IPC unchanged — confirms irregular pointer-chasing bottleneck")
-print()
+# Annotate L2=2MB explicitly with real area
+hw_idx = next(i for i in range(len(configs)) if configs[i][5] == "hw")
+ax.annotate(
+    f"L2=2MB:\n{areas[hw_idx]:.2f}× area\n+{gains[hw_idx]:.1f}% IPC",
+    xy=(areas[hw_idx], gains[hw_idx]),
+    xytext=(-65, -28), textcoords="offset points",
+    fontsize=7.5, color="#B71C1C",
+    arrowprops=dict(arrowstyle="->", color="#B71C1C", lw=1.2),
+    bbox=dict(boxstyle="round", fc="#FFEBEE", ec="#F44336", alpha=0.9)
+)
 
-if HAS_PLOT:
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle("HNSW PPA Analysis — gem5 EEL6764", fontsize=13, fontweight="bold")
+# ── Panel 3: Total power (real McPAT watts) ─────────────────────────────────
+ax = axes[2]
+total_powers_W = [c[4] for c in configs]
+bars = ax.bar(range(len(configs)), total_powers_W, color=colors,
+              edgecolor="black", linewidth=0.8)
+ax.axhline(BASELINE_POWER, color="black", linestyle="--", linewidth=1)
+for i, (bar, pw) in enumerate(zip(bars, total_powers_W)):
+    ax.text(bar.get_x() + bar.get_width()/2, pw + 0.05, f"{pw:.2f}W",
+            ha="center", va="bottom", fontsize=7.5)
+ax.set_xticks(range(len(configs)))
+ax.set_xticklabels(labels, fontsize=7.5)
+ax.set_ylabel("Total Power  (W)  — McPAT 45nm HP")
+ax.set_title("Total Chip Power\n(runtime dynamic + leakage)")
+ax.set_ylim(0, 13.5)
+ax.legend(handles=legend_patches, fontsize=7, loc="upper left")
+ax.set_facecolor("#F9F9F9")
 
-    labels = [c[0] for c in configs]
-    ipcs   = [c[1] for c in configs]
-    gains  = [(c[1] - BASELINE_IPC) / BASELINE_IPC * 100 for c in configs]
-    areas  = [relative_area(c[0].replace("\n", " ")) for c in configs]
-    powers = [relative_power(a) for a in areas]
-    CAT_COLOR = {
-        "baseline": "gray",
-        "l2":       "steelblue",
-        "rob":      "tomato",
-        "prefetch": "mediumseagreen",
-        "mem":      "darkorchid",
-        "sw_fix":   "darkorange",
-    }
-    colors = [CAT_COLOR.get(c[3], "black") for c in configs]
+plt.tight_layout()
+out = os.path.join(os.path.dirname(__file__), "..", "results", "ppa_analysis.png")
+plt.savefig(out, dpi=150, bbox_inches="tight")
+print(f"[saved] {out}")
 
-    # Legend patches for all category colors
-    import matplotlib.patches as mpatches
-    legend_patches = [mpatches.Patch(color=v, label=k) for k, v in CAT_COLOR.items()]
-
-    axes[0].bar(range(len(configs)), ipcs, color=colors, edgecolor="black")
-    axes[0].axhline(BASELINE_IPC, color="black", linestyle="--", linewidth=1)
-    axes[0].set_xticks(range(len(configs)))
-    axes[0].set_xticklabels(labels, fontsize=6)
-    axes[0].set_ylabel("IPC"); axes[0].set_title("IPC Comparison"); axes[0].set_ylim(0.7, 1.3)
-    axes[0].legend(handles=legend_patches, fontsize=6, loc="upper left")
-
-    non_baseline = [(a, g, col, c[0]) for a, g, col, c in zip(areas, gains, colors, configs)
-                    if c[3] != "baseline"]
-    nb_areas  = [x[0] for x in non_baseline]
-    nb_gains  = [x[1] for x in non_baseline]
-    nb_colors = [x[2] for x in non_baseline]
-    nb_labels = [x[3] for x in non_baseline]
-    axes[1].scatter(nb_areas, nb_gains, c=nb_colors, s=100, edgecolors="black", zorder=5)
-    for a, g, lbl in zip(nb_areas, nb_gains, nb_labels):
-        axes[1].annotate(lbl.replace("\n", " "), (a, g),
-                         textcoords="offset points", xytext=(5, 3), fontsize=7)
-    axes[1].axhline(0, color="black", linewidth=0.5)
-    axes[1].set_xlabel("Relative Chip Area"); axes[1].set_ylabel("IPC Gain vs Baseline (%)")
-    axes[1].set_title("Performance vs Area Cost")
-    axes[1].legend(handles=legend_patches, fontsize=6, loc="upper left")
-
-    axes[2].bar(range(len(configs)), powers, color=colors, edgecolor="black")
-    axes[2].axhline(1.0, color="black", linestyle="--", linewidth=1)
-    axes[2].set_xticks(range(len(configs)))
-    axes[2].set_xticklabels(labels, fontsize=6)
-    axes[2].set_ylabel("Relative Power"); axes[2].set_title("Power Overhead")
-
-    plt.tight_layout()
-    out = os.path.join(os.path.dirname(__file__), "..", "results", "ppa_analysis.png")
-    plt.savefig(out, dpi=150)
-    print(f"[plot] Saved: {out}")
+# ── Summary table ─────────────────────────────────────────────────────────────
+print("\n" + "="*90)
+print(f"  {'Config':<26} {'IPC':>6} {'Gain':>8} {'Area(mm²)':>10} {'Rel.Area':>9} "
+      f"{'TotPwr(W)':>10} {'IPC/W':>8}")
+print("="*90)
+for label, ipc, area, rp, tp, cat in configs:
+    name     = label.replace("\n", " ")
+    gain     = (ipc - BASELINE_IPC) / BASELINE_IPC * 100
+    rel_a    = area / BASELINE_AREA
+    ipc_w    = ipc / tp
+    gain_str = f"{gain:+.1f}%" if abs(gain) > 0.01 else "baseline"
+    print(f"  {name:<26} {ipc:>6.3f} {gain_str:>8} {area:>10.2f} {rel_a:>8.2f}× "
+          f"{tp:>10.3f} {ipc_w:>8.4f}")
+print("="*90)
+print(f"\n  Baseline: 39.21 mm², 9.970 W, IPC=0.932")
+print(f"  L2=2MB:  53.53 mm² (+1.37×), 11.335 W (+13.7%), IPC=1.036 — NOT Pareto optimal")
+print(f"  R+Q:     39.21 mm² (1.00×),   9.936 W ( -0.3%), IPC=1.039 — Pareto optimal")

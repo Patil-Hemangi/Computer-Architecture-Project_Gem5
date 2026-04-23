@@ -7,9 +7,11 @@ Generates three publication-quality figures:
 
 Usage:
     python advanced_analysis.py
+    python advanced_analysis.py --baseline-stats results/hnsw_l2_256kB/stats.txt
 Outputs: results/cpi_stack.png, results/roofline.png, results/mpki_comparison.png
 """
 import os
+import re
 import sys
 try:
     import matplotlib
@@ -23,42 +25,135 @@ except ImportError:
     print("[warn] matplotlib not found — pip install matplotlib")
 
 # ---------------------------------------------------------------------------
-# Baseline measured values (from hnsw_l2_256kB/stats.txt)
+# Fallback baseline values (used when stats.txt cannot be found)
+# All values from hnsw_l2_256kB_roi/stats.txt  — ROI (search phase only).
+# Updated to match actual ROI stats; do NOT use full-run values here.
 # ---------------------------------------------------------------------------
-SIM_INSTS       = 9_045_514
-SIM_SECONDS     = 0.003000        # simulated seconds
-CLOCK_GHZ       = 3.0
-ISSUE_WIDTH     = 4
+_FALLBACK = {
+    "SIM_INSTS":        8_397_180,
+    "SIM_SECONDS":      0.003003,
+    "IPC":              0.932087,
+    "CPI":              1.072861,
+    "C_0ISSUE":         2_956_759,
+    "C_1ISSUE":         1_118_273,
+    "C_2ISSUE":         812_170,
+    "C_3ISSUE":         1_625_506,
+    "C_4ISSUE":         2_390_049,
+    "L1D_HITS":         3_226_146,
+    "L1D_MISSES":       68_119,
+    "L1I_MISSES":       1_411,
+    "L2_HITS":          6_317,
+    "L2_MISSES":        70_564,
+    "DRAM_READ_BURSTS": 75_691,
+    "BP_LOOKUPS":       1_284_717,
+    "BP_MISPREDICTS":   23_605,
+}
 
-IPC             = 1.004052
-CPI             = 0.995964
-TOTAL_CYCLES    = SIM_INSTS * CPI  # 9,009,294
+def _parse_stat(filepath, pattern):
+    """Search for a regex pattern in stats.txt and return the first captured float."""
+    try:
+        with open(filepath) as f:
+            text = f.read()
+        m = re.search(pattern, text, re.MULTILINE)
+        if m:
+            return float(m.group(1))
+    except (FileNotFoundError, OSError):
+        pass
+    return None
 
-# Issue distribution (cycles)
-C_0ISSUE        = 2_911_717       # 32.68% — pure DRAM stall
-C_1ISSUE        = 804_607         # 9.03%
-C_2ISSUE        = 1_400_223       # 15.72%
-C_3ISSUE        = 307_961         # 3.46%
-C_4ISSUE        = 3_484_794       # 39.11%
+def load_baseline(stats_path=None):
+    """
+    Try to load baseline values from a stats.txt file.
+    Falls back gracefully to _FALLBACK values for any key not found.
+    Returns a dict with all required keys.
+    """
+    if stats_path is None:
+        # Try default locations relative to this script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        candidates = [
+            os.path.join(script_dir, "..", "results", "hnsw_l2_256kB", "stats.txt"),
+            os.path.join(script_dir, "..", "results", "hnsw_baseline", "stats.txt"),
+        ]
+        for c in candidates:
+            if os.path.isfile(c):
+                stats_path = c
+                break
 
-# Cache stats
-L1D_HITS        = 3_432_775
-L1D_MISSES      = 68_705
-L1I_MISSES      = 1_395
-L2_HITS         = 6_387
-L2_MISSES       = 70_576
-DRAM_READ_BURSTS = 75_685
+    d = {}
+    if stats_path and os.path.isfile(stats_path):
+        print(f"[info] Loading baseline stats from: {stats_path}")
+        pat = {
+            "SIM_INSTS":        r"simInsts\s+([\d.e+]+)",
+            "SIM_SECONDS":      r"simSeconds\s+([\d.e+]+)",
+            "IPC":              r"board\.processor\.cores\.core\.ipc\s+([\d.e+\-]+)",
+            "CPI":              r"board\.processor\.cores\.core\.cpi\s+([\d.e+\-]+)",
+            "C_0ISSUE":         r"board\.processor\.cores\.core\.numIssuedDist::0\s+([\d.e+]+)",
+            "C_1ISSUE":         r"board\.processor\.cores\.core\.numIssuedDist::1\s+([\d.e+]+)",
+            "C_2ISSUE":         r"board\.processor\.cores\.core\.numIssuedDist::2\s+([\d.e+]+)",
+            "C_3ISSUE":         r"board\.processor\.cores\.core\.numIssuedDist::3\s+([\d.e+]+)",
+            "C_4ISSUE":         r"board\.processor\.cores\.core\.numIssuedDist::4\s+([\d.e+]+)",
+            "L1D_HITS":         r"board\.cache_hierarchy\.l1d-cache-0\.overallHits::total\s+([\d.e+]+)",
+            "L1D_MISSES":       r"board\.cache_hierarchy\.l1d-cache-0\.overallMisses::total\s+([\d.e+]+)",
+            "L1I_MISSES":       r"board\.cache_hierarchy\.l1i-cache-0\.overallMisses::total\s+([\d.e+]+)",
+            "L2_HITS":          r"board\.cache_hierarchy\.l2-cache-0\.overallHits::total\s+([\d.e+]+)",
+            "L2_MISSES":        r"board\.cache_hierarchy\.l2-cache-0\.overallMisses::total\s+([\d.e+]+)",
+            "DRAM_READ_BURSTS": r"board\.memory\.mem_ctrl\.readBursts\s+([\d.e+]+)",
+            "BP_LOOKUPS":       r"board\.processor\.cores\.core\.branchPred\.condPredicted\s+([\d.e+]+)",
+            "BP_MISPREDICTS":   r"board\.processor\.cores\.core\.branchPred\.condIncorrect\s+([\d.e+]+)",
+        }
+        for key, pattern in pat.items():
+            val = _parse_stat(stats_path, pattern)
+            if val is not None:
+                d[key] = val
+            else:
+                print(f"[warn] '{key}' not found in stats.txt — using fallback value")
+                d[key] = _FALLBACK[key]
+    else:
+        print("[warn] No stats.txt found — using fallback baseline values")
+        d = dict(_FALLBACK)
+    return d
 
-# Branch predictor
-BP_LOOKUPS      = 1_380_089       # conditional branch predictions
-BP_MISPREDICTS  = 24_300          # condIncorrect
+# ---------------------------------------------------------------------------
+# Load baseline — use CLI arg if provided, else auto-discover
+# ---------------------------------------------------------------------------
+import argparse as _ap
+_p = _ap.ArgumentParser(add_help=False)
+_p.add_argument("--baseline-stats", default=None)
+_args, _ = _p.parse_known_args()
+_B = load_baseline(_args.baseline_stats)
 
-# Memory constants
-DRAM_BURST_BYTES   = 64           # one DRAM burst = 64 bytes
-DDR4_PEAK_BW_GBS   = 19.2        # DDR4-2400 single-channel theoretical peak
-DDR4_LATENCY_NS    = 55.0        # DDR4-2400 typical access latency (ns)
-HBM_LATENCY_NS     = 10.0        # HBM2 estimated (4× improvement assumed for PIM)
-BP_PENALTY_CYCLES  = 12          # avg branch misprediction penalty for O3/ROB=128
+# Unpack into module-level names for backward compat with all functions below
+SIM_INSTS        = int(_B["SIM_INSTS"])
+SIM_SECONDS      = _B["SIM_SECONDS"]
+CLOCK_GHZ        = 3.0
+ISSUE_WIDTH      = 4
+
+IPC              = _B["IPC"]
+CPI              = _B["CPI"]
+TOTAL_CYCLES     = SIM_INSTS * CPI
+
+C_0ISSUE         = int(_B["C_0ISSUE"])
+C_1ISSUE         = int(_B["C_1ISSUE"])
+C_2ISSUE         = int(_B["C_2ISSUE"])
+C_3ISSUE         = int(_B["C_3ISSUE"])
+C_4ISSUE         = int(_B["C_4ISSUE"])
+
+L1D_HITS         = int(_B["L1D_HITS"])
+L1D_MISSES       = int(_B["L1D_MISSES"])
+L1I_MISSES       = int(_B["L1I_MISSES"])
+L2_HITS          = int(_B["L2_HITS"])
+L2_MISSES        = int(_B["L2_MISSES"])
+DRAM_READ_BURSTS = int(_B["DRAM_READ_BURSTS"])
+
+BP_LOOKUPS       = int(_B["BP_LOOKUPS"])
+BP_MISPREDICTS   = int(_B["BP_MISPREDICTS"])
+
+# Memory constants — configurable via environment or keep as documented defaults
+DRAM_BURST_BYTES   = 64
+DDR4_PEAK_BW_GBS   = float(os.environ.get("DDR4_PEAK_BW_GBS", "19.2"))
+DDR4_LATENCY_NS    = float(os.environ.get("DDR4_LATENCY_NS",  "55.0"))
+HBM_LATENCY_NS     = 10.0
+BP_PENALTY_CYCLES  = 12
 
 # ---------------------------------------------------------------------------
 # Derived scalars
@@ -364,7 +459,16 @@ def plot_amdahl(out_dir):
 # Main
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    out_dir = os.path.join(os.path.dirname(__file__), "..", "results")
+    import argparse
+    parser = argparse.ArgumentParser(description="EEL6764 HNSW advanced analysis")
+    parser.add_argument("--baseline-stats", default=None,
+                        help="Path to baseline stats.txt (auto-discovers if omitted)")
+    parser.add_argument("--out-dir", default=None,
+                        help="Output directory for plots (default: <project_root>/results)")
+    args = parser.parse_args()
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    out_dir = args.out_dir or os.path.join(script_dir, "..", "results")
     os.makedirs(out_dir, exist_ok=True)
 
     print_advanced_summary()

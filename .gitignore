@@ -1,5 +1,30 @@
-# Dataset files
+# Dataset files (large binary vectors — not tracked)
 bigann/
+
+# Old drafts and scratch work
+unnecessary/
+
+# Duplicate versioned report — only HNSW_Final_Report.docx is canonical
+report/HNSW_Project_Report_v5.docx
+
+# Compiled benchmark binaries
+benchmarks/hnsw_gem5
+benchmarks/hnsw_gem5_deep
+benchmarks/hnsw_gem5_hybrid
+benchmarks/hnsw_gem5_hybrid_deep
+benchmarks/hnsw_gem5_mt
+benchmarks/hnsw_gem5_packed
+benchmarks/hnsw_gem5_prefetch
+benchmarks/hnsw_gem5_quant
+benchmarks/hnsw_gem5_reorder
+benchmarks/hnsw_gem5_rq
+
+# McPAT source (nested git repo — use separately)
+mcpat/
+
+# gem5 auto-generated dot/pdf config diagrams
+results/*/config.dot.pdf
+results/*/config.dot.svg
 
 # Python cache
 __pycache__/
